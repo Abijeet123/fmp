@@ -1,0 +1,9 @@
+fun inverseSqrt(n) {
+	return i_sqrt(n);
+}
+
+var n = intInput();
+
+var start = clock();
+print inverseSqrt(n);
+print clock() - start;
