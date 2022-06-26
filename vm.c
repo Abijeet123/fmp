@@ -1,5 +1,6 @@
 //> A Virtual Machine vm-c
 //> Types of Values include-stdarg
+#include <fcntl.h>
 #include <bits/stdc++.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -27,12 +28,18 @@
 //< Strings vm-include-object-memory
 #include "vm.h"
 
+#include <sys/file.h>
+
 using namespace std;
 
 VM vm; // [one]
 //> Calls and Functions clock-native
 static Value clockNative(int argCount, Value* args) {
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static Value exit(int argCount, Value* args) {
+	exit(0);
 }
 
 static Value clear(int argCount, Value* args) {
@@ -86,6 +93,24 @@ static Value fisr(int argCount, Value* args) {
         return NUMBER_VAL(y);
 }
 
+static Value Fopen(int argCount, Value* args) {
+	int fd = open(AS_STRING(*args)->chars, O_RDONLY, 0);
+	if(fd == -1) {
+		printf("Couldn't open file %s\n", AS_STRING(*args)->chars);
+		return NUMBER_VAL(-1);
+	}
+	
+	return NUMBER_VAL(fd);
+}
+
+static Value Fcreate(int argCount, Value* args) {
+	int fd = creat(AS_STRING(*args)->chars, 0666);
+	if(fd == -1) {
+		printf("Couldn't create file %s\n", AS_STRING(*args)->chars);
+		return NUMBER_VAL(-1);
+	}
+	return NUMBER_VAL(fd);
+}
 
 double sqrt_newton(double n) {
     const double eps = 1E-15;
@@ -342,7 +367,10 @@ void initVM() {
   defineNative("primitive_root", generator);
   defineNative("clear", clear);
   defineNative("intInput", intInput);
-  defineNative("floatInput", floatInput);	
+  defineNative("floatInput", floatInput);
+  defineNative("Fcreate", Fcreate);
+  defineNative("Fopen", Fopen);
+  defineNative("exit", exit);
 //< Calls and Functions define-native-clock
 }
 
