@@ -1,6 +1,7 @@
 //> A Virtual Machine vm-c
 //> Types of Values include-stdarg
 #include <fcntl.h>
+#include <string.h>
 #include <bits/stdc++.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -30,9 +31,122 @@
 
 #include <sys/file.h>
 
+
 using namespace std;
 
 VM vm; // [one]
+
+typedef vector<int> lnum;
+
+const int base = 1000* 1000 * 1000;
+
+void lnumDisplay(lnum a) { 
+
+	printf("%d", a.empty() ? 0 : a.back());
+	for (int i = (int)a.size() - 2; i >= 0; --i)
+		printf("%09d", a[i]);
+		printf("\n");
+}
+
+static Value BigIntAdd(int argCount, Value* args) {
+	lnum a, b;
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9){
+			string k = AS_STRING(*args)->chars;
+			a.push_back (atoi ((k.substr (0, i).c_str())));
+		} else 
+		{	
+		string k = AS_STRING(*args)->chars;
+		a.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9)
+		{	
+			string k = AS_STRING(*(args  +1))->chars;
+			b.push_back (atoi (k.substr (0, i).c_str()));	
+			}
+		else 
+		{	
+		string k = AS_STRING(*(args  +1))->chars;
+		b.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+	int carry = 0;
+	for (size_t i=0; i<max(a.size(),b.size()) || carry; ++i) {
+	    if (i == a.size())
+		a.push_back (0);
+	    a[i] += carry + (i < b.size() ? b[i] : 0);
+	    carry = a[i] >= base;
+	    if (carry)  a[i] -= base;
+	}
+	lnumDisplay(a);
+}
+
+static Value BigIntSubtract(int argCount, Value* args) {
+	lnum a, b;
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9){
+			string k = AS_STRING(*args)->chars;
+			a.push_back (atoi ((k.substr (0, i).c_str())));
+		} else 
+		{	
+		string k = AS_STRING(*args)->chars;
+		a.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9)
+		{	
+			string k = AS_STRING(*(args  +1))->chars;
+			b.push_back (atoi (k.substr (0, i).c_str()));	
+			}
+		else 
+		{	
+		string k = AS_STRING(*(args  +1))->chars;
+		b.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+	int carry = 0;
+	for (size_t i=0; i<b.size() || carry; ++i) {
+	    a[i] -= carry + (i < b.size() ? b[i] : 0);
+	    carry = a[i] < 0;
+	    if (carry)  a[i] += base;
+	}
+	while (a.size() > 1 && a.back() == 0)
+	    a.pop_back();
+	    
+	lnumDisplay(a);
+
+
+}
+
+static Value BigIntMultiply(int argCount, Value* args) {
+	lnum a, b;
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9){
+			string k = AS_STRING(*args)->chars;
+			a.push_back (atoi ((k.substr (0, i).c_str())));
+		} else 
+		{	
+		string k = AS_STRING(*args)->chars;
+		a.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+	for (int i = (int)(AS_STRING(*args)->length); i > 0; i -= 9)
+		if ( i < 9)
+		{	
+			string k = AS_STRING(*(args  +1))->chars;
+			b.push_back (atoi (k.substr (0, i).c_str()));	
+			}
+		else 
+		{	
+		string k = AS_STRING(*(args  +1))->chars;
+		b.push_back (atoi (k.substr (i - 9, 9).c_str())); }
+			
+	lnum c (a.size()+b.size());
+	for (size_t i=0; i<a.size(); ++i)
+	    for (int j=0, carry=0; j<(int)b.size() || carry; ++j) {
+		long long cur = c[i+j] + a[i] * 1ll * (j < (int)b.size() ? b[j] : 0) + carry;
+		c[i+j] = int (cur % base);
+		carry = int (cur / base);
+	    }
+	while (c.size() > 1 && c.back() == 0)
+	    c.pop_back();
+	
+	lnumDisplay(c);
+
+}
 //> Calls and Functions clock-native
 static Value clockNative(int argCount, Value* args) {
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
@@ -371,6 +485,9 @@ void initVM() {
   defineNative("Fcreate", Fcreate);
   defineNative("Fopen", Fopen);
   defineNative("exit", exit);
+  defineNative("BigIntAdd", BigIntAdd);
+  defineNative("BigIntSubtract", BigIntSubtract);
+  defineNative("BigIntMultiply", BigIntMultiply);
 //< Calls and Functions define-native-clock
 }
 
